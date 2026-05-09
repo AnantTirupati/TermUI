@@ -13,7 +13,17 @@ import {
     StatusIndicator as StatusWidget,
     LogView as LogViewWidget,
     Widget,
+    Tree as TreeWidget,
+    Skeleton as SkeletonWidget,
+    Grid as GridWidget,
+    BarChart as BarChartWidget,
+    ProgressBar as ProgressBarWidget,
+    Spinner as SpinnerWidget,
 } from '@termuijs/widgets';
+import type { TreeNode, TreeOptions } from '@termuijs/widgets';
+import type { BarGroup, BarChartOptions } from '@termuijs/widgets';
+import type { SkeletonOptions } from '@termuijs/widgets';
+import type { GridOptions } from '@termuijs/widgets';
 import type { Reactive } from './reactive.js';
 import { resolve } from './reactive.js';
 
@@ -201,3 +211,139 @@ export function logView(lines: Reactive<string[]>, opts: QuickLogViewOptions = {
     (lv as any).__reactiveLines = lines;
     return lv;
 }
+
+// ── Tree ──
+
+export interface QuickTreeOptions {
+    onSelect?: (node: TreeNode, path: number[]) => void;
+    indent?: number;
+}
+
+/**
+ * Create a collapsible tree widget for hierarchical data.
+ */
+export function tree(data: TreeNode[], opts: QuickTreeOptions = {}): Widget {
+    const options: TreeOptions = {
+        nodes: data,
+        onSelect: opts.onSelect,
+        indent: opts.indent,
+    };
+    const t = new TreeWidget(options, {
+        flexGrow: 1,
+        border: 'single',
+        borderColor: { type: 'named', name: 'brightBlack' },
+        padding: 1,
+    });
+    (t as any).__reactiveTreeData = null; // static by default
+    return t;
+}
+
+// ── Skeleton ──
+
+export interface QuickSkeletonOptions {
+    variant?: 'pulse' | 'shimmer';
+    intervalMs?: number;
+    color?: Color;
+}
+
+/**
+ * Create an animated skeleton loading placeholder.
+ */
+export function skeleton(opts: QuickSkeletonOptions = {}): Widget {
+    const skeletonOpts: SkeletonOptions = {
+        variant: opts.variant,
+        intervalMs: opts.intervalMs,
+        color: opts.color,
+    };
+    return new SkeletonWidget({ flexGrow: 1, height: 3 }, skeletonOpts);
+}
+
+// ── GridWidget ──
+
+export interface QuickGridOptions {
+    gap?: number;
+    rowGap?: number;
+    colGap?: number;
+}
+
+/**
+ * Create a CSS-Grid-like layout widget that fills items left-to-right
+ * wrapping every `columns` items.
+ */
+export function gridWidget(columns: number, items: Widget[], opts: QuickGridOptions = {}): Widget {
+    const gridOpts: GridOptions = {
+        columns,
+        gap: opts.gap,
+        rowGap: opts.rowGap,
+        colGap: opts.colGap,
+    };
+    const g = new GridWidget({ flexGrow: 1 }, gridOpts);
+    for (const item of items) {
+        g.addChild(item);
+    }
+    return g;
+}
+
+// ── BarChart ──
+
+export interface QuickBarChartOptions extends BarChartOptions {}
+
+/**
+ * Create a bar chart widget.
+ * Data can be static or reactive.
+ */
+export function barChart(data: Reactive<BarGroup[]>, opts: QuickBarChartOptions = {}): Widget {
+    const resolved = resolve(data);
+    const bc = new BarChartWidget(resolved, { flexGrow: 1 }, opts);
+    (bc as any).__reactiveBarData = data;
+    return bc;
+}
+
+// ── ProgressBar ──
+
+export interface QuickProgressBarOptions {
+    color?: Color;
+    showLabel?: boolean;
+}
+
+/**
+ * Create a progress bar widget.
+ * Value should be between 0 and 1.
+ */
+export function progressBar(value: Reactive<number>, opts: QuickProgressBarOptions = {}): Widget {
+    const resolved = resolve(value);
+    const pb = new ProgressBarWidget(
+        { height: 1, flexGrow: 1 },
+        {
+            value: resolved,
+            fillColor: opts.color ?? { type: 'named', name: 'green' },
+            showLabel: opts.showLabel ?? true,
+        },
+    );
+    (pb as any).__reactiveValue = value;
+    return pb;
+}
+
+// ── Spinner ──
+
+export interface QuickSpinnerOptions {
+    label?: string;
+    color?: Color;
+}
+
+/**
+ * Create an animated spinner widget.
+ */
+export function spinner(opts: QuickSpinnerOptions = {}): Widget {
+    return new SpinnerWidget(
+        { height: 1 },
+        {
+            label: opts.label,
+            color: opts.color,
+        },
+    );
+}
+
+// ── Re-export types from @termuijs/widgets for convenience ──
+export type { TreeNode } from '@termuijs/widgets';
+export type { BarGroup, BarChartOptions } from '@termuijs/widgets';

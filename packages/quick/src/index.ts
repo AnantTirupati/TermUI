@@ -19,6 +19,13 @@ export {
     sparkline,
     status,
     logView,
+    // Sprint 1.5/2 additions
+    tree,
+    skeleton,
+    gridWidget,
+    barChart,
+    progressBar,
+    spinner,
 } from './widgets.js';
 
 export type {
@@ -30,8 +37,47 @@ export type {
     QuickSparklineOptions,
     QuickStatusOptions,
     QuickLogViewOptions,
+    // Sprint 1.5/2 additions
+    QuickTreeOptions,
+    QuickSkeletonOptions,
+    QuickGridOptions,
+    QuickBarChartOptions,
+    QuickProgressBarOptions,
+    QuickSpinnerOptions,
+    TreeNode,
+    BarGroup,
+    BarChartOptions,
 } from './widgets.js';
 
 // ── Reactive ──────────────────────────────────────────
 export { resolve, isReactive } from './reactive.js';
 export type { Reactive } from './reactive.js';
+
+// ── JSX Hooks (re-exported for convenience) ───────────
+export {
+    useAsync,
+    useKeymap,
+    useMotion,
+} from '@termuijs/jsx';
+export type { AsyncState, KeyBinding, MotionPreferences } from '@termuijs/jsx';
+
+// ── Theme Hook (from @termuijs/tss) ───────────────────
+export { useTheme } from '@termuijs/tss';
+
+// ── Data Hooks (from @termuijs/data) ──────────────────
+export {
+    useCpu,
+    useMemory,
+    useDisk,
+    useNetwork,
+    useTopProcesses,
+    useSystemInfo,
+    useHttpHealth,
+} from '@termuijs/data';
+export type {
+    CpuMetrics,
+    MemoryMetrics,
+    DiskMetrics,
+    NetworkMetrics,
+    SystemInfo,
+} from '@termuijs/data';

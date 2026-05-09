@@ -31,7 +31,10 @@
   },
   "dependencies": {
     "@termuijs/core": "workspace:*",
-    "@termuijs/widgets": "workspace:*"
+    "@termuijs/widgets": "workspace:*",
+    "@termuijs/jsx": "workspace:*",
+    "@termuijs/tss": "workspace:*",
+    "@termuijs/data": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

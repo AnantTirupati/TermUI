@@ -229,6 +229,15 @@ importers:
       '@termuijs/core':
         specifier: workspace:*
         version: link:../core
+      '@termuijs/data':
+        specifier: workspace:*
+        version: link:../data
+      '@termuijs/jsx':
+        specifier: workspace:*
+        version: link:../jsx
+      '@termuijs/tss':
+        specifier: workspace:*
+        version: link:../tss
       '@termuijs/widgets':
         specifier: workspace:*
         version: link:../widgets

@@ -2,11 +2,69 @@
 // @termuijs/quick — AppBuilder: the fluent API entry point
 // ─────────────────────────────────────────────────────
 
-import { App, type KeyEvent, type EventMap } from '@termuijs/core';
-import { Box, Text, Widget, Gauge, Sparkline, StatusIndicator, Table, LogView, List, TextInput } from '@termuijs/widgets';
+import { App, type KeyEvent } from '@termuijs/core';
+import {
+    Box,
+    Text,
+    Widget,
+    Gauge,
+    Sparkline,
+    StatusIndicator,
+    Table,
+    LogView,
+    List,
+    TextInput,
+    BarChart,
+    ProgressBar,
+    Tree,
+} from '@termuijs/widgets';
 import type { LayoutChild } from './layout.js';
-import { toWidget, col } from './layout.js';
-import { resolve, isReactive, type Reactive } from './reactive.js';
+import { toWidget } from './layout.js';
+import { resolve, type Reactive } from './reactive.js';
+
+// ── Error display helper ──────────────────────────────
+
+/**
+ * Create a simple error display widget — a red-bordered box with the error message.
+ * Used as the fallback when the app fails to start.
+ */
+function createErrorWidget(err: Error): Widget {
+    const box = new Box({
+        flexDirection: 'column',
+        width: '100%',
+        height: '100%',
+        border: 'single',
+        borderColor: { type: 'named', name: 'red' },
+        padding: 1,
+    });
+    box.addChild(new Text('  Application Error', {
+        height: 1,
+        bold: true,
+        fg: { type: 'named', name: 'red' },
+    }));
+    box.addChild(new Text('', { height: 1 }));
+    const message = err.message || String(err);
+    box.addChild(new Text(`  ${message}`, {
+        height: 1,
+        fg: { type: 'named', name: 'yellow' },
+    }));
+    if (err.stack) {
+        box.addChild(new Text('', { height: 1 }));
+        const stackLines = err.stack.split('\n').slice(1, 5);
+        for (const line of stackLines) {
+            box.addChild(new Text(`  ${line.trim()}`, {
+                height: 1,
+                dim: true,
+            }));
+        }
+    }
+    box.addChild(new Text('', { height: 1 }));
+    box.addChild(new Text('  Press Ctrl+C to exit.', {
+        height: 1,
+        dim: true,
+    }));
+    return box;
+}
 
 export interface QuickKeyAction {
     key: string;
@@ -104,9 +162,43 @@ export class AppBuilder {
     /**
      * Build the widget tree and run the app.
      * Returns a promise that resolves when the app exits.
+     *
+     * If widget-tree construction throws, an error panel is shown instead
+     * of crashing the process (analogous to an ErrorBoundary for widget-mode).
      */
     async run(): Promise<number> {
-        // Build the root widget tree
+        let root: Box;
+
+        try {
+            root = this._buildRoot();
+        } catch (err) {
+            // Error boundary fallback — display a red-bordered error widget
+            const errWidget = createErrorWidget(
+                err instanceof Error ? err : new Error(String(err)),
+            );
+            const errorRoot = new Box({
+                flexDirection: 'column',
+                width: '100%',
+                height: '100%',
+            });
+            errorRoot.addChild(errWidget);
+            const errorApp = new App(errorRoot, { fullscreen: this._fullscreen, skipFallback: true });
+            errorApp.events.on('key', (event: KeyEvent) => {
+                if (event.ctrl && event.key === 'c') {
+                    errorApp.exit(1);
+                }
+            });
+            return errorApp.mount();
+        }
+
+        return this._runWithRoot(root);
+    }
+
+    /**
+     * Build the root Box widget tree from the configured children, title, and key hints.
+     * Throws on any widget-construction error — caught by run() as an error boundary.
+     */
+    private _buildRoot(): Box {
         const root = new Box({
             flexDirection: 'column',
             width: '100%',
@@ -146,6 +238,13 @@ export class AppBuilder {
             root.addChild(footer);
         }
 
+        return root;
+    }
+
+    /**
+     * Wire up the App, key events, focus management, and refresh loop for a built root widget.
+     */
+    private async _runWithRoot(root: Box): Promise<number> {
         // Create the App
         const appInstance = new App(root, { fullscreen: this._fullscreen, skipFallback: true });
         this._app = appInstance;
@@ -345,6 +444,21 @@ export class AppBuilder {
         if (widget instanceof List && w.__reactiveItems) {
             const items: string[] = resolve(w.__reactiveItems);
             widget.setItems(items.map(label => ({ label, value: label })));
+        }
+
+        // BarChart — reactive data
+        if (widget instanceof BarChart && w.__reactiveBarData) {
+            widget.setData(resolve(w.__reactiveBarData));
+        }
+
+        // ProgressBar — reactive value
+        if (widget instanceof ProgressBar && w.__reactiveValue) {
+            widget.setValue(resolve(w.__reactiveValue));
+        }
+
+        // Tree — reactive nodes (if data changes)
+        if (widget instanceof Tree && w.__reactiveTreeNodes) {
+            widget.setNodes(resolve(w.__reactiveTreeNodes));
         }
 
         // Recurse into children
