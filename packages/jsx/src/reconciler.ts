@@ -6,7 +6,7 @@
 // and applies minimal Widget mutations.
 // ─────────────────────────────────────────────────────
 
-import { Box, Text, Widget, ProgressBar, Grid } from '@termuijs/widgets';
+import { Box, Text, Widget, ProgressBar, Grid, Skeleton } from '@termuijs/widgets';
 import type { Style, Color } from '@termuijs/core';
 import type { VNode, VElement, FC } from './vnode.js';
 import { isVElement, isVFragment, Fragment, flattenChildren } from './vnode.js';
@@ -114,6 +114,14 @@ function createIntrinsicWidget(tag: string, props: Record<string, any>, children
                 gap:     props.gap,
                 rowGap:  props.rowGap,
                 colGap:  props.colGap,
+            });
+        }
+
+        case 'skeleton': {
+            return new Skeleton({ ...style }, {
+                variant:    props.variant,
+                intervalMs: props.intervalMs,
+                chars:      props.chars,
             });
         }
 

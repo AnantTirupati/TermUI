@@ -113,6 +113,19 @@ export namespace JSX {
             height?: number | string;
             padding?: number;
             margin?: number;
+            border?: string;
+            borderColor?: string;
+        };
+        skeleton: {
+            key?: string | number;
+            variant?: 'pulse' | 'shimmer';
+            intervalMs?: number;
+            chars?: [string, string];
+            flexGrow?: number;
+            width?: number | string;
+            height?: number | string;
+            border?: string;
+            borderColor?: string;
         };
     }
 }
