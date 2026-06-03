@@ -124,7 +124,7 @@ The store uses a selective subscription pattern (Zustand-like). When components 
 ---
 
 ### 2. Create
-To create a state store, call `createStore` with a `StateCreator` function (which receives `set` and `get` functions) or a initial state object. The returned object is a hook that can be invoked inside components, and it also exposes helper methods on itself for access outside the component lifecycle.
+To create a state store, call `createStore` with a `StateCreator` function (which receives `set` and `get` functions) or an initial state object. The returned object is a hook that can be invoked inside components, and it also exposes helper methods on itself for access outside the component lifecycle.
 
 - **`getState()`**: Retrieves the current state of the store without initiating a subscription. Helpful inside event handlers or timers.
 - **`setState()`**: Updates the state. You can pass a partial state object to merge, or a function that receives the current state and returns a partial update.
