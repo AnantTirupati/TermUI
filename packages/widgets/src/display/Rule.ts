@@ -54,9 +54,11 @@ export class Rule extends Widget {
     }
 
     protected _renderSelf(screen: Screen): void {
-        const { x, y, width, height } = this._rect;
-        if (width <= 0 || height <= 0) return;
+        const { x, y, width, height } = this._getContentRect();
 
+        if (width <= 0 || height <= 0) {
+            return;
+        }
         const fg = this._color;
         const lineAttrs = { fg };
 
