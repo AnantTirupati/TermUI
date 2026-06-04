@@ -24,7 +24,7 @@ function renderRule(
 
 /** Read a single row from the back buffer as a plain string. */
 function rowText(screen: Screen, row: number): string {
-    return screen.back[row].map(c => c.char).join('');
+    return screen.getLine(row);
 }
 
 describe('Rule', () => {
