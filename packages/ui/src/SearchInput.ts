@@ -102,8 +102,9 @@ export class SearchInput extends Widget {
     }
 
     protected _renderSelf(screen: Screen): void {
-        const { x, y, width } = this._rect;
-        if (width <= 0) return;
+        const rect = this._getContentRect();
+        const { x, y, width, height } = rect;
+        if (width <= 0 || height <= 0) return;
 
         const attrs = styleToCellAttrs(this.style);
         const icon = caps.unicode ? '🔍' : '/';

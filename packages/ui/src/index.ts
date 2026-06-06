@@ -185,6 +185,3 @@ export type { QuizPromptOptions, QuizQuestion, QuizResult } from './QuizPrompt.j
 
 export { SearchInput } from './SearchInput.js';
 export type { SearchInputOptions } from './SearchInput.js';
-
-// export { Breadcrumb } from './Breadcrumb.js';
-// export type { BreadcrumbItem, BreadcrumbOptions } from './Breadcrumb.js';

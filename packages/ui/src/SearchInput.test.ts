@@ -93,4 +93,22 @@ describe('SearchInput', () => {
         unicodeInput.render(unicodeScreen);
         expect(renderRow(unicodeScreen, 0)).toContain('🔍');
     });
+
+    it('respects padding — text starts after the padding offset, not at _rect.x', () => {
+        // Without the fix, content would render at x=0 and overlap any border
+        // drawn by the base Widget. With the fix, _getContentRect() shifts
+        // the content to x=2 because of the left padding.
+        const input = new SearchInput({ placeholder: 'padded' });
+        input.setStyle({ padding: { left: 2, top: 0, right: 0, bottom: 0 } });
+        input.updateRect({ x: 0, y: 0, width: 20, height: 1 });
+        const screen = new Screen(20, 1);
+        input.render(screen);
+
+        const row = screen.back[0];
+        // The first two cells should be untouched (empty/padding)
+        expect(row[0]?.char).toBe(' ');
+        expect(row[1]?.char).toBe(' ');
+        // The icon and placeholder should start at x=2
+        expect(row[2]?.char).not.toBe(' ');
+    });
 });
