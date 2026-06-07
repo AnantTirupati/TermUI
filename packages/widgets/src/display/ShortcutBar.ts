@@ -13,6 +13,9 @@ import {
 } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
+/**
+ * Represents an individual shortcut item in the shortcut bar.
+ */
 export interface ShortcutItem {
     /** Keyboard key character/name (e.g. 'F1', 'q', 'ctrl+c') */
     key: string;
@@ -22,6 +25,9 @@ export interface ShortcutItem {
     action?: () => void;
 }
 
+/**
+ * Options to configure styling and behavior of the ShortcutBar.
+ */
 export interface ShortcutBarOptions {
     /** Custom styles for the key (e.g., fg/bg colors). Default: cyan, bold */
     keyStyle?: Partial<Style>;
@@ -41,6 +47,12 @@ export class ShortcutBar extends Widget {
     private _labelStyle: Partial<Style>;
     private _separator: string;
 
+    /**
+     * Creates an instance of ShortcutBar.
+     * @param items Initial list of shortcut items.
+     * @param style Partial widget style object.
+     * @param opts Custom options for key styling, label styling, and separator.
+     */
     constructor(
         items: ShortcutItem[] = [],
         style: Partial<Style> = {},
@@ -54,36 +66,56 @@ export class ShortcutBar extends Widget {
         this.focusable = false; // Usually not focused; key events are delegated or run globally
     }
 
-    /** Set/replace all shortcut items. */
+    /**
+     * Sets or replaces the current list of shortcut items.
+     * @param items The new list of shortcut items.
+     */
     setItems(items: ShortcutItem[]): void {
         this._items = items;
         this.markDirty();
     }
 
-    /** Get the current shortcut items. */
+    /**
+     * Retrieves the current list of shortcut items.
+     * @returns The list of shortcut items.
+     */
     getItems(): ShortcutItem[] {
         return this._items;
     }
 
-    /** Set separator between shortcut items. */
+    /**
+     * Updates the horizontal separator string printed between shortcut segments.
+     * @param separator The new separator string.
+     */
     setSeparator(separator: string): void {
         this._separator = separator;
         this.markDirty();
     }
 
-    /** Get the current separator. */
+    /**
+     * Retrieves the current horizontal separator string.
+     * @returns The separator string.
+     */
     getSeparator(): string {
         return this._separator;
     }
 
-    /** Update key and label styles. */
+    /**
+     * Updates the custom styles applied to keys and label segments.
+     * @param keyStyle Partial styling to apply to keys.
+     * @param labelStyle Partial styling to apply to labels.
+     */
     setStyles(keyStyle?: Partial<Style>, labelStyle?: Partial<Style>): void {
         if (keyStyle) this._keyStyle = keyStyle;
         if (labelStyle) this._labelStyle = labelStyle;
         this.markDirty();
     }
 
-    /** Check if key event matches any of the shortcut keys and trigger action. */
+    /**
+     * Handles keyboard keypress events. Triggers the action callback of the
+     * shortcut item matching the pressed key (case-insensitively).
+     * @param event The key event triggered by the user.
+     */
     handleKey(event: KeyEvent): void {
         const matchingItem = this._items.find(
             item => item.key.toLowerCase() === event.key.toLowerCase(),
@@ -92,6 +124,7 @@ export class ShortcutBar extends Widget {
             matchingItem.action();
         }
     }
+
 
     protected _renderSelf(screen: Screen): void {
         const rect = this._getContentRect();
