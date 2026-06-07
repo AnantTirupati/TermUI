@@ -43,8 +43,8 @@ export class ShortcutBar extends Widget {
 
     constructor(
         items: ShortcutItem[] = [],
-        opts: ShortcutBarOptions = {},
         style: Partial<Style> = {},
+        opts: ShortcutBarOptions = {},
     ) {
         super(style);
         this._items = items;
@@ -107,7 +107,7 @@ export class ShortcutBar extends Widget {
 
         for (let i = 0; i < this._items.length; i++) {
             const item = this._items[i];
-            
+
             const keyText = `[${item.key}]`;
             const labelText = item.label;
 
