@@ -24,6 +24,9 @@ interface MockChildResult {
 
 interface MockChild extends Promise<MockChildResult> {
   all: Readable;
+  exitCode: number | null;
+  killed: boolean;
+  kill(): void;
 }
 
 describe('useExeca', () => {
@@ -33,8 +36,14 @@ describe('useExeca', () => {
 
   function createMockChild(chunks: string[], exitCode = 0): MockChild {
     const stream = Readable.from(chunks);
+    let rejectPromise: ((err: any) => void) | null = null;
+    let resolvePromise: ((val: MockChildResult) => void) | null = null;
+
     const promise = new Promise<MockChildResult>((resolve, reject) => {
+      resolvePromise = resolve;
+      rejectPromise = reject;
       stream.on('end', () => {
+        mockChild.exitCode = exitCode;
         if (exitCode === 0) {
           resolve({ exitCode, all: stream });
         } else {
@@ -48,6 +57,18 @@ describe('useExeca', () => {
     // Cast is necessary to assign the 'all' property to the promise
     const mockChild = Object.assign(promise, {
       all: stream,
+      exitCode: null as number | null,
+      killed: false,
+      kill: () => {
+        mockChild.killed = true;
+        mockChild.exitCode = -1;
+        stream.destroy();
+        if (rejectPromise) {
+          const err = new Error('Process was killed') as MockError;
+          err.exitCode = -1;
+          rejectPromise(err);
+        }
+      },
     }) as MockChild;
     return mockChild;
   }
@@ -123,6 +144,26 @@ describe('useExeca', () => {
     await expect(promise).rejects.toThrow('Command failed with exit code 1');
 
     expect(lines).toEqual(['some error']);
+  });
+
+  it('kills the child process if the consumer exits the loop early', async () => {
+    const mockChild = createMockChild(['line1\n', 'line2\n']);
+    mockChild.exitCode = null;
+    mockChild.killed = false;
+
+    const killSpy = vi.spyOn(mockChild, 'kill');
+
+    // Cast to unknown and then to ReturnType<typeof execa> is needed to satisfy mock return type structure
+    vi.mocked(execa).mockReturnValue(mockChild as unknown as ReturnType<typeof execa>);
+
+    const { run } = useExeca();
+
+    for await (const line of run('test-cmd')) {
+      expect(line).toBe('line1');
+      break;
+    }
+
+    expect(killSpy).toHaveBeenCalled();
   });
 
   it('exposes useShell as an alias of useExeca', () => {

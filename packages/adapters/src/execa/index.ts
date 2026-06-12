@@ -3,6 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import type { Options } from 'execa';
+import { execa } from 'execa';
 
 export interface UseExecaResult {
   run(
@@ -31,6 +32,22 @@ async function getExeca(): Promise<typeof import('execa')> {
   }
 }
 
+function isExecaCallable(obj: unknown): obj is typeof execa {
+  return typeof obj === 'function';
+}
+
+function isExecaModuleWithExeca(obj: unknown): obj is { execa: typeof execa } {
+  return typeof obj === 'object' && obj !== null && 'execa' in obj && typeof (obj as { execa: unknown }).execa === 'function';
+}
+
+function isExecaModuleWithDefault(obj: unknown): obj is { default: typeof execa } {
+  return typeof obj === 'object' && obj !== null && 'default' in obj && typeof (obj as { default: unknown }).default === 'function';
+}
+
+function isOptions(obj: unknown): obj is Options {
+  return typeof obj === 'object' && obj !== null && !Array.isArray(obj);
+}
+
 /**
  * Hook to execute external commands using execa.
  * Streams stdout and stderr interleaved as an AsyncIterable of lines.
@@ -42,9 +59,18 @@ export function useExeca(globalOpts?: Options): UseExecaResult {
       argsOrOpts?: string[] | Options,
       opts?: Options
     ): AsyncGenerator<string, void, unknown> {
-      const execaModule = await getExeca();
-      // Type assertion is needed to support fallback resolutions across bundler modules
-      const execaFn = (execaModule.execa ?? (execaModule as any).default ?? execaModule) as typeof execaModule.execa;
+      const execaModule: unknown = await getExeca();
+      let execaFn: typeof execa;
+
+      if (isExecaModuleWithExeca(execaModule)) {
+        execaFn = execaModule.execa;
+      } else if (isExecaModuleWithDefault(execaModule)) {
+        execaFn = execaModule.default;
+      } else if (isExecaCallable(execaModule)) {
+        execaFn = execaModule;
+      } else {
+        throw new Error('useExeca: Resolved execa module is not callable.');
+      }
 
       let file: string;
       let args: string[] = [];
@@ -56,16 +82,16 @@ export function useExeca(globalOpts?: Options): UseExecaResult {
         }
         file = cmd[0];
         args = cmd.slice(1);
-        if (argsOrOpts && !Array.isArray(argsOrOpts)) {
-          options = argsOrOpts as Options;
+        if (isOptions(argsOrOpts)) {
+          options = argsOrOpts;
         }
       } else {
         file = cmd;
         if (Array.isArray(argsOrOpts)) {
           args = argsOrOpts;
           options = opts ?? {};
-        } else if (argsOrOpts) {
-          options = argsOrOpts as Options;
+        } else if (isOptions(argsOrOpts)) {
+          options = argsOrOpts;
         }
       }
 
@@ -80,27 +106,42 @@ export function useExeca(globalOpts?: Options): UseExecaResult {
         } : undefined,
       };
 
-      const child = execaFn(file, args, mergedOpts);
-      const stream = child.all;
-      if (!stream) {
-        throw new Error('useExeca: stdout/stderr stream (child.all) is not available.');
-      }
+      // child is typed as any to support all dynamic overloads returned by execaFn at runtime
+      let child: any;
+      try {
+        child = execaFn(file, args, mergedOpts);
+        const stream = child.all;
+        if (!stream) {
+          throw new Error('useExeca: stdout/stderr stream (child.all) is not available.');
+        }
 
-      let buffer = '';
-      for await (const chunk of stream) {
-        const chunkStr = typeof chunk === 'string' ? chunk : chunk.toString('utf8');
-        buffer += chunkStr;
-        const lines = buffer.split(/\r?\n/);
-        buffer = lines.pop() ?? '';
-        for (const line of lines) {
-          yield line;
+        let buffer = '';
+        for await (const chunk of stream) {
+          const chunkStr = typeof chunk === 'string' ? chunk : chunk.toString('utf8');
+          buffer += chunkStr;
+          const lines = buffer.split(/\r?\n/);
+          buffer = lines.pop() ?? '';
+          for (const line of lines) {
+            yield line;
+          }
+        }
+        if (buffer) {
+          yield buffer;
+        }
+
+        await child;
+      } finally {
+        if (child) {
+          if (child.exitCode === null && !child.killed) {
+            child.kill();
+          }
+          try {
+            await child;
+          } catch {
+            // Ignore error on cleanup if the consumer exited early
+          }
         }
       }
-      if (buffer) {
-        yield buffer;
-      }
-
-      await child;
     },
   };
 }
