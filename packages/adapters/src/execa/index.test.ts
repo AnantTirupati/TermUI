@@ -13,33 +13,49 @@ vi.mock('execa', () => {
   };
 });
 
+interface MockError extends Error {
+  exitCode: number;
+}
+
+interface MockChildResult {
+  exitCode: number;
+  all: Readable;
+}
+
+interface MockChild extends Promise<MockChildResult> {
+  all: Readable;
+}
+
 describe('useExeca', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  function createMockChild(chunks: string[], exitCode = 0) {
+  function createMockChild(chunks: string[], exitCode = 0): MockChild {
     const stream = Readable.from(chunks);
-    const promise = new Promise<any>((resolve, reject) => {
+    const promise = new Promise<MockChildResult>((resolve, reject) => {
       stream.on('end', () => {
         if (exitCode === 0) {
           resolve({ exitCode, all: stream });
         } else {
-          const err = new Error(`Command failed with exit code ${exitCode}`);
-          (err as any).exitCode = exitCode;
+          const err = new Error(`Command failed with exit code ${exitCode}`) as MockError;
+          err.exitCode = exitCode;
           reject(err);
         }
       });
     });
 
-    return Object.assign(promise, {
+    // Cast is necessary to assign the 'all' property to the promise
+    const mockChild = Object.assign(promise, {
       all: stream,
-    });
+    }) as MockChild;
+    return mockChild;
   }
 
   it('streams lines of stdout/stderr as they emit', async () => {
     const mockChild = createMockChild(['hello\nworld', '\nfoo\nbar\n']);
-    vi.mocked(execa).mockReturnValue(mockChild as any);
+    // Cast to unknown and then to ReturnType<typeof execa> is needed to satisfy mock return type structure
+    vi.mocked(execa).mockReturnValue(mockChild as unknown as ReturnType<typeof execa>);
 
     const { run } = useExeca();
     const lines: string[] = [];
@@ -56,7 +72,8 @@ describe('useExeca', () => {
 
   it('accepts command array', async () => {
     const mockChild = createMockChild(['ok\n']);
-    vi.mocked(execa).mockReturnValue(mockChild as any);
+    // Cast to unknown and then to ReturnType<typeof execa> is needed to satisfy mock return type structure
+    vi.mocked(execa).mockReturnValue(mockChild as unknown as ReturnType<typeof execa>);
 
     const { run } = useExeca();
     const lines: string[] = [];
@@ -74,7 +91,8 @@ describe('useExeca', () => {
 
   it('merges global options with local options', async () => {
     const mockChild = createMockChild(['ok\n']);
-    vi.mocked(execa).mockReturnValue(mockChild as any);
+    // Cast to unknown and then to ReturnType<typeof execa> is needed to satisfy mock return type structure
+    vi.mocked(execa).mockReturnValue(mockChild as unknown as ReturnType<typeof execa>);
 
     const { run } = useExeca({ env: { GLOBAL: 'yes' }, timeout: 1000 });
     const iterator = run('my-cmd', { env: { LOCAL: 'yes' } });
@@ -90,16 +108,19 @@ describe('useExeca', () => {
 
   it('propagates errors when command fails with non-zero exit code', async () => {
     const mockChild = createMockChild(['some error\n'], 1);
-    vi.mocked(execa).mockReturnValue(mockChild as any);
+    // Cast to unknown and then to ReturnType<typeof execa> is needed to satisfy mock return type structure
+    vi.mocked(execa).mockReturnValue(mockChild as unknown as ReturnType<typeof execa>);
 
     const { run } = useExeca();
     const lines: string[] = [];
 
-    await expect(async () => {
+    const promise = (async () => {
       for await (const line of run('fail-cmd')) {
         lines.push(line);
       }
-    }).rejects.toThrow('Command failed with exit code 1');
+    })();
+
+    await expect(promise).rejects.toThrow('Command failed with exit code 1');
 
     expect(lines).toEqual(['some error']);
   });
